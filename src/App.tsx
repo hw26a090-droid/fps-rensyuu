@@ -30,12 +30,6 @@ interface ScoreRecord {
   id: string;
   time: number;
   date: string;
-  rating: {
-    label: string;
-    description: string;
-    color: string;
-    emoji: string;
-  };
   hz?: number;
 }
 
@@ -56,6 +50,7 @@ export default function App() {
   // Refresh rate configurations
   const [refreshRate, setRefreshRate] = useState<number>(240);
   const [detectedHz, setDetectedHz] = useState<number | null>(null);
+  const [showThresholds, setShowThresholds] = useState<boolean>(true);
 
   const timeoutRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -157,48 +152,6 @@ export default function App() {
     return `${month}/${day} ${hours}:${minutes}`;
   };
 
-  // Determine speed rating with neon sci-fi theme color classes
-  const getRating = (time: number) => {
-    if (time < 185) {
-      return { 
-        label: "超人/神速 (GODLIKE)", 
-        description: "ニューロンの限界レベル！信じられない神がかった反射速度です。", 
-        color: "bg-rose-500/10 text-rose-400 border-rose-500/30 ring-rose-950/40", 
-        emoji: "⚡" 
-      };
-    }
-    if (time < 225) {
-      return { 
-        label: "トッププロ (ELITE)", 
-        description: "最高クラスの反射神経を宿しています。極めて優れた速度です。", 
-        color: "bg-amber-500/10 text-amber-400 border-amber-500/30 ring-amber-950/40", 
-        emoji: "✨" 
-      };
-    }
-    if (time < 265) {
-      return { 
-        label: "プロゲーマー (PRO)", 
-        description: "ハイレベルな反応性能です。対戦ゲームで有利に立てる実力派です。", 
-        color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 ring-cyan-950/40", 
-        emoji: "🔥" 
-      };
-    }
-    if (time < 330) {
-      return { 
-        label: "一般標準 (NORMAL)", 
-        description: "平均的な反応速度です。トレーニングを重ねてさらに高めましょう！", 
-        color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 ring-emerald-950/40", 
-        emoji: "👍" 
-      };
-    }
-    return { 
-      label: "のんびり (RELAXED)", 
-      description: "少し遅めかも？集中して画面中央の円が出た瞬間を狙いましょう！", 
-      color: "bg-slate-500/10 text-slate-400 border-slate-500/30 ring-slate-950/40", 
-      emoji: "🐢" 
-    };
-  };
-
   // Determine performance rank based on average reaction time (with Refresh-Rate offset calibration)
   const getRank = (avgTime: number, hz: number = refreshRate) => {
     const offset = hz === 240 ? 0 : (500 / hz) - 2.1;
@@ -255,6 +208,27 @@ export default function App() {
       name: "練習が必要",
       color: "text-rose-500/90 border-rose-950 bg-rose-950/10 shadow-none"
     };
+  };
+
+  // Get performance thresholds calibrated for current refresh rate
+  const getThresholdList = (hz: number) => {
+    const os = hz === 240 ? 0 : (500 / hz) - 2.1;
+    const f = (val: number) => {
+      const res = val + os;
+      return (Math.round(res * 10) / 10).toFixed(1);
+    };
+
+    return [
+      { name: "最高", range: `${f(150)} ms 以下`, color: "text-rose-400 border-rose-500/20 bg-rose-500/5" },
+      { name: "とても良い", range: `${f(150)} ms 超 〜 ${f(170)} ms`, color: "text-amber-400 border-amber-500/20 bg-amber-500/5" },
+      { name: "良い", range: `${f(170)} ms 超 〜 ${f(190)} ms`, color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
+      { name: "平均以上", range: `${f(190)} ms 超 〜 ${f(220)} ms`, color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/5" },
+      { name: "平均", range: `${f(220)} ms 超 〜 ${f(260)} ms`, color: "text-blue-400 border-blue-500/20 bg-blue-500/5" },
+      { name: "平均以下", range: `${f(260)} ms 超 〜 ${f(320)} ms`, color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/5" },
+      { name: "遅い", range: `${f(320)} ms 超 〜 ${f(400)} ms`, color: "text-yellow-500/90 border-yellow-500/15 bg-yellow-500/5" },
+      { name: "とても遅い", range: `${f(400)} ms 超 〜 ${f(500)} ms`, color: "text-slate-400 border-slate-700 bg-slate-800/10" },
+      { name: "練習が必要", range: `${f(500)} ms 超`, color: "text-rose-500/90 border-rose-950 bg-rose-950/10" }
+    ];
   };
 
   // Starts a completely new 5-round testing play session
@@ -333,12 +307,10 @@ export default function App() {
         const calculatedAverage = Math.round((scoreSum / 5) * 10) / 10;
         setReactionTime(calculatedAverage);
 
-        const ratingObj = getRating(calculatedAverage);
         const newRecord: ScoreRecord = {
           id: Math.random().toString(36).substring(2, 11),
           time: calculatedAverage,
           date: formatRecordDate(new Date()),
-          rating: ratingObj,
           hz: refreshRate
         };
 
@@ -369,12 +341,10 @@ export default function App() {
         const calculatedAverage = Math.round((scoreSum / 5) * 10) / 10;
         setReactionTime(calculatedAverage);
 
-        const ratingObj = getRating(calculatedAverage);
         const newRecord: ScoreRecord = {
           id: Math.random().toString(36).substring(2, 11),
           time: calculatedAverage,
           date: formatRecordDate(new Date()),
-          rating: ratingObj,
           hz: refreshRate
         };
 
@@ -575,37 +545,70 @@ export default function App() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           
           {/* Refresh Rate Calibration Control */}
-          <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-            <div className="flex items-center gap-2.5 font-sans">
-              <div className="p-1 px-2 rounded bg-cyan-400/10 text-cyan-400 text-[10px] font-mono border border-cyan-500/20 font-bold">
-                CALIBRATION
+          <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col gap-3.5 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 font-sans">
+                <div className="p-1 px-2 rounded bg-cyan-400/10 text-cyan-400 text-[10px] font-mono border border-cyan-500/20 font-bold">
+                  CALIBRATION
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200">基準リフレッシュレート設定</h4>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    モニターの描画速度に合わせて判定基準を自動または手動で調整します
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-200">基準リフレッシュレート設定</h4>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                  モニターの描画速度に合わせて判定基準を自動または手動で調整します
-                </p>
+              <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                {detectedHz !== null && (
+                  <span className="text-[10px] font-mono font-bold text-slate-500 border border-slate-900 bg-slate-950/40 rounded-lg px-2 py-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-pulse" />
+                    実測: <strong className="text-cyan-400 font-extrabold">{detectedHz}Hz</strong>
+                  </span>
+                )}
+                <select
+                  value={refreshRate}
+                  onChange={(e) => changeRefreshRate(Number(e.target.value))}
+                  className="bg-slate-950 border border-slate-800 text-cyan-400 font-mono text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all cursor-pointer hover:border-slate-700"
+                >
+                  {[60, 75, 90, 120, 144, 165, 240, 280, 360, 500].map((hz) => (
+                    <option key={hz} value={hz}>
+                      {hz}Hz {hz === 240 ? "(240Hz基準)" : ""} {detectedHz !== null && Math.abs(detectedHz - hz) <= 15 ? "(自動検出)" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowThresholds(!showThresholds)}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold transition-all border border-cyan-500/20 hover:border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 px-2.5 py-1.5 rounded-xl cursor-pointer whitespace-nowrap"
+                >
+                  {showThresholds ? "基準表を閉じる" : "基準表を表示"}
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 self-start sm:self-auto">
-              {detectedHz !== null && (
-                <span className="text-[10px] font-mono font-bold text-slate-500 border border-slate-900 bg-slate-950/40 rounded-lg px-2 py-1 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-pulse" />
-                  実測: <strong className="text-cyan-400 font-extrabold">{detectedHz}Hz</strong>
-                </span>
-              )}
-              <select
-                value={refreshRate}
-                onChange={(e) => changeRefreshRate(Number(e.target.value))}
-                className="bg-slate-950 border border-slate-800 text-cyan-400 font-mono text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all cursor-pointer hover:border-slate-700"
-              >
-                {[60, 75, 90, 120, 144, 165, 240, 280, 360, 500].map((hz) => (
-                  <option key={hz} value={hz}>
-                    {hz}Hz {hz === 240 ? "(240Hz基準)" : ""} {detectedHz !== null && Math.abs(detectedHz - hz) <= 15 ? "(自動検出)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+
+            {/* Threshold Reference Table */}
+            {showThresholds && (
+              <div className="border-t border-slate-900/60 pt-3 mt-0.5">
+                <div className="text-[10px] font-bold text-slate-400 mb-2 flex items-center justify-between gap-1">
+                  <span>{refreshRate}Hzモニター向け 判定基準値一覧</span>
+                  <span className="text-slate-500 text-[9px] font-normal font-mono">
+                    {refreshRate === 240 ? "基準 (オフセットなし)" : `基準オフセット: +${((500 / refreshRate) - 2.1).toFixed(1)}ms`}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                  {getThresholdList(refreshRate).map((t, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`flex flex-col p-1.5 px-2.5 rounded-xl border text-left transition-colors duration-150 ${t.color}`}
+                    >
+                      <span className="text-[9px] font-sans font-extrabold tracking-tight">{t.name}</span>
+                      <span className="text-[10px] font-mono tracking-tight font-bold opacity-90 mt-0.5">{t.range}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Reaction Arena Card */}
@@ -686,9 +689,60 @@ export default function App() {
                   <h3 className="text-2xl font-black text-white mb-3 tracking-wider uppercase font-sans">
                     REFLEX TEST START
                   </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed max-w-[340px] md:max-w-[400px] mb-8 font-medium">
-                    1プレイ<strong className="text-cyan-400 font-bold">5ラウンド制</strong>のベンチマークが起動します。「開始」を押した後、1.5〜4秒のランダムなタイミングで高輝度の円 (CLICK!) が出現します。合計5回測定し、その平均反応速度を「今回のスコア」として算出します。
-                  </p>
+                  
+                  {/* Step instructions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full mb-5 mt-2">
+                    {/* Step 1 */}
+                    <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3 flex flex-col items-center text-center transition-all hover:border-slate-800/80">
+                      <div className="relative w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-2">
+                        <span className="absolute -top-1 -left-1 w-4 h-4 bg-cyan-500 text-[10px] font-black text-slate-950 rounded-full flex items-center justify-center font-sans">1</span>
+                        <Timer className="w-5 h-5 text-cyan-400" />
+                      </div>
+                      <h4 className="text-xs font-black text-slate-200">待つ</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight font-medium">
+                        円が出るまで画面を注視
+                      </p>
+                      <span className="text-[9px] text-slate-500 mt-1 block font-medium font-mono">
+                        (ランダム約1.5〜4秒)
+                      </span>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3 flex flex-col items-center text-center transition-all hover:border-slate-800/80">
+                      <div className="relative w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-2">
+                        <span className="absolute -top-1 -left-1 w-4 h-4 bg-cyan-500 text-[10px] font-black text-slate-950 rounded-full flex items-center justify-center font-sans">2</span>
+                        <Zap className="w-5 h-5 text-cyan-400" />
+                      </div>
+                      <h4 className="text-xs font-black text-slate-200">即クリック</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight font-medium">
+                        円が出たら素早くタップ
+                      </p>
+                      <span className="text-[9px] text-slate-500 mt-1 block font-medium">
+                        (画面のどこでもOK)
+                      </span>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3 flex flex-col items-center text-center transition-all hover:border-slate-800/80">
+                      <div className="relative w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-2">
+                        <span className="absolute -top-1 -left-1 w-4 h-4 bg-cyan-500 text-[10px] font-black text-slate-950 rounded-full flex items-center justify-center font-sans">3</span>
+                        <Trophy className="w-5 h-5 text-cyan-400" />
+                      </div>
+                      <h4 className="text-xs font-black text-slate-200">スコア算出</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight font-medium">
+                        5ラウンドの平均で測定
+                      </p>
+                      <span className="text-[9px] text-slate-500 mt-1 block font-medium font-mono">
+                        (測定単位: ms)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Warning label */}
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-rose-400 bg-rose-950/20 border border-rose-950/40 rounded-xl px-4 py-2 mb-8 max-w-sm w-full mx-auto">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>⚠️ フライングはお手つき(そのラウンドは1000ms)</span>
+                  </div>
                   
                   <button
                     id="btn-start"
@@ -710,22 +764,11 @@ export default function App() {
               {/* WAITING State View */}
               {status === GameState.WAITING && (
                 <div className="flex flex-col items-center pointer-events-none select-none">
-                  <div className="relative mb-6 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full border-2 border-slate-800 border-t-rose-500 animate-spin" />
-                    <span className="absolute font-mono text-[9px] text-rose-400 font-bold tracking-widest animate-pulse">
-                      WAIT
+                  <div className="flex items-center gap-3">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="font-mono text-sm tracking-[0.4em] font-extrabold text-rose-500/90 uppercase">
+                      WAIT...
                     </span>
-                  </div>
-                  <h3 className="text-xl font-black text-rose-500 mb-2.5 tracking-widest font-mono">
-                    NEURAL WAITING...
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-[280px] leading-relaxed tracking-wide font-medium">
-                    検出器の起動準備が完了しました。円の出現をそのまま注視してください。この状態でのクリックは無視されます。
-                  </p>
-                  
-                  <div className="mt-8 flex items-center gap-2 bg-slate-900/85 px-4 py-2.5 rounded-xl text-[10px] text-slate-400 border border-slate-800 font-mono">
-                    <Info className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
-                    <span className="tracking-wide">PREMATURE TRIGGER PROTECTION ACTIVE</span>
                   </div>
                 </div>
               )}
@@ -762,12 +805,6 @@ export default function App() {
                               1000 ms ペナルティ
                             </span>
                           </div>
-
-                          {/* Rating display card */}
-                          <div className="px-4 py-2.5 rounded-xl border text-xs font-bold font-mono tracking-wider flex items-center gap-2.5 mb-5 leading-none bg-rose-500/10 text-rose-400 border-rose-500/30 ring-rose-950/40">
-                            <span className="text-base leading-none">⚠️</span>
-                            <span className="uppercase">フライング検出 / EARLY TRIGGER</span>
-                          </div>
                         </>
                       ) : (
                         <>
@@ -779,12 +816,6 @@ export default function App() {
                             <span className="text-xl font-black font-mono tracking-wider ml-1.5 text-cyan-400">
                               ms
                             </span>
-                          </div>
-
-                          {/* Rating display card */}
-                          <div className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-mono tracking-wider flex items-center gap-2.5 mb-5 leading-none ${getRating(lastRoundResult).color}`}>
-                            <span className="text-base leading-none">{getRating(lastRoundResult).emoji}</span>
-                            <span className="uppercase">{getRating(lastRoundResult).label.split(" (")[0]}</span>
                           </div>
                         </>
                       )}
@@ -844,15 +875,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Cumulative rating details */}
-                      <div className={`px-4 py-2.5 rounded-xl border text-xs font-bold font-mono tracking-wider flex items-center gap-2.5 mb-5 leading-none ${getRating(reactionTime).color}`}>
-                        <span className="text-base leading-none">{getRating(reactionTime).emoji}</span>
-                        <span className="uppercase">{getRating(reactionTime).label}</span>
-                      </div>
-                      
-                      <p className="text-xs text-slate-400 max-w-[340px] mb-6 leading-relaxed font-semibold">
-                        {getRating(reactionTime).description}
-                      </p>
+
 
                       {/* Details of individual rounds */}
                       <div className="w-full bg-slate-950/60 border border-slate-900 rounded-2xl p-4 mb-6 text-left">
